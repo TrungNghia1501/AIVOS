@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import time
+import socket
 
 # Initialize MediaPipe solutions
 mp_pose = mp.solutions.pose
@@ -8,7 +9,11 @@ mp_drawing = mp.solutions.drawing_utils
 
 # Open webcam
 # '0' is usually the default webcam index. Change if needed.
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
+
+# Set up the socket connection parameters
+HOST = '127.0.0.1'  # The server's hostname or IP address
+PORT = 4013         # The port used by the server
 
 # Use the Pose module to detect the human body
 with mp_pose.Pose(
@@ -71,14 +76,24 @@ with mp_pose.Pose(
         if person_is_close and not ai_active:
             print("Customer detected! Activating the AI receptionist...")
             ai_active = True
-            # TODO: Add your code here to display the AI character
-            # For example: my_ai_system.show_character()
+            try:
+                # Connect to the other application and send an "activate" message
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((HOST, PORT))
+                    s.sendall(b'activate')
+            except ConnectionRefusedError:
+                print("Connection to the AI character server failed. Is the server running?")
 
         elif not person_is_close and ai_active:
             print("Customer has left. Deactivating the AI receptionist...")
             ai_active = False
-            # TODO: Add your code here to hide the AI character
-            # For example: my_ai_system.hide_character()
+            try:
+                # Connect to the other application and send a "deactivate" message
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((HOST, PORT))
+                    s.sendall(b'deactivate')
+            except ConnectionRefusedError:
+                print("Connection to the AI character server failed. Is the server running?")
 
         # Display the AI's status on the screen
         status_text = "AI: Active" if ai_active else "AI: Inactive"
